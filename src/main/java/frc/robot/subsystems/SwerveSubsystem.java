@@ -94,7 +94,7 @@ public class SwerveSubsystem extends SubsystemBase {
           // Method that will drive the robot given ROBOT RELATIVE ChassisSpeeds. Also optionally outputs individual module feedforwards
           new PPHolonomicDriveController(
               // PPHolonomicController is the built in path following controller for holonomic drive trains
-              new PIDConstants(0.01, 0.0, 0.0),
+              new PIDConstants(0.2, 0.0, 0.0),
               // Translation PID constants
               new PIDConstants(0.05, 0.0, 0.0)
               // Rotation PID constants
@@ -132,6 +132,7 @@ public class SwerveSubsystem extends SubsystemBase {
       double xInput = Math.pow(translationX.getAsDouble(), 1); 
       double yInput = Math.pow(translationY.getAsDouble(), 1); 
       // Faz o robô se mover
+      //swerveDrive.setHeadingCorrection(true);
       driveFieldOriented(swerveDrive.swerveController.getTargetSpeeds(xInput, yInput,
                                                                       headingX.getAsDouble(),
                                                                       headingY.getAsDouble(),

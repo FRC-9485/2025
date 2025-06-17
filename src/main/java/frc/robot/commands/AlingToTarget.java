@@ -3,7 +3,6 @@ package frc.robot.commands;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Timer;
-import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
 import frc.robot.subsystems.Limelight;
@@ -73,6 +72,7 @@ public class AlingToTarget extends Command {
             System.out.println("Iniciando alinhamento com a tag...");
             timer.reset();
             timer.start();
+
             tentativas = 0;
             ultimoEstadoTarget = false;
             ultimaTx = 0.0;
@@ -81,7 +81,6 @@ public class AlingToTarget extends Command {
             System.err.println("Erro na inicialização do alinhamento: " + e.getMessage());
         }
     }
-
     @Override
     public void execute() {
         try {
@@ -101,10 +100,10 @@ public class AlingToTarget extends Command {
                 double distanciaX = limelight.getTy();
                 double ta = limelight.getTargetArea();
 
-                if (ta >= 4) {
+                if (ta >= 3.5) {
                     ta -= 3.5;
                 } else if (ta <= 4) {
-                    ta *= 32;
+                    ta *= 16;
                 }
                 
                 // Proteção contra valores inválidos

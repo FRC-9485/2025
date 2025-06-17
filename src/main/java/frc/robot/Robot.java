@@ -7,7 +7,6 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.wpilibj.Encoder;
@@ -257,19 +256,21 @@ public class Robot extends TimedRobot {
       }
     }
     
-    if (joystick.getRawButton(5) && botao < 2) { // Puxa
+    if (joystick.getRawButton(6) && botao < 2) { // Puxa
       motor_da_bola.set(0.3);
       botao++;
       trava_motor_bola = false;
     }
 
-    if (joystick.getRawButton(6) && botao < 2) { // Solta
-      motor_da_bola.set(0.3);
+    if (joystick.getRawButton(5) && botao < 2) { // Solta
+      motor_da_bola.set(-0.3);
       botao++;
       trava_motor_bola = false;
     }
 
-    if(botao == 2){ // parar
+
+
+    if(botao >= 2){ // parar
       botao = 0;
       motor_da_bola.set(0);
     }
