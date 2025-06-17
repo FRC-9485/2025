@@ -51,12 +51,6 @@ public class Turn45 extends Command {
             this.cancel();
         }
 
-    //    if (xboxController.getLeftX() > 0 || xboxController.getLeftX() < 0 || xboxController.getLeftY() > 0 || xboxController.getLeftY() < 0) {
-    //        System.out.println("Parando de curvar");
-    //        controller.calculate(currentAngle, currentAngle);
-    //        System.out.println("Curva parada");
-    //     }
-
         System.out.println("Valor divido" + pigeon2.getYaw().getValueAsDouble() % 360);
         //double rotationSpeed = controller.calculate(currentAngle, setpoint);
         System.out.println("Valor divido e somado: " + mySetpoint);
@@ -85,7 +79,6 @@ public class Turn45 extends Command {
     @Override
     public void end(boolean interrupted) {
         subsystem.drive(translation2d, 0, true);
-        // Removido o reset do pigeon2 para manter a referência
         System.out.println("Rotação concluída");
     }
 }

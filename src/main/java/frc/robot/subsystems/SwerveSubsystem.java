@@ -24,25 +24,23 @@ import frc.robot.Constants;
 import frc.robot.Constants.Tracao;
 import swervelib.SwerveController;
 import swervelib.SwerveDrive;
+import swervelib.imu.Pigeon2Swerve;
 import swervelib.telemetry.SwerveDriveTelemetry;
 import swervelib.telemetry.SwerveDriveTelemetry.TelemetryVerbosity;
 import swervelib.parser.SwerveDriveConfiguration;
 import swervelib.parser.SwerveParser;
 
-
-/** 
- * Classe de subsistema onde fazemos a ponte do nosso código para YAGSL
- */
 public class SwerveSubsystem extends SubsystemBase {
     // Objeto global da SwerveDrive (Classe YAGSL)
     public SwerveDrive swerveDrive;
     Pigeon2 pigeon = new Pigeon2(9);
+    Pigeon2Swerve swerve = new Pigeon2Swerve(9);
+   
   
     // Método construtor da classe
     public SwerveSubsystem(File directory) {
         // Seta a telemetria como nível mais alto
         SwerveDriveTelemetry.verbosity = TelemetryVerbosity.HIGH;
-        
 
         // Acessa os arquivos do diretório .JSON
         try {
@@ -60,6 +58,7 @@ public class SwerveSubsystem extends SubsystemBase {
     public void periodic() {
       // Dentro da função periódica atualizamos nossa odometria
       swerveDrive.updateOdometry();
+      
     }
 
       public void setupPathPlanner() {

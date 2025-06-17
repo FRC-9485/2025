@@ -7,15 +7,13 @@ package frc.robot;
 import frc.robot.Constants.Controle;
 import frc.robot.Constants.Trajetoria;
 import frc.robot.commands.AlingToTarget;
+import frc.robot.commands.ResetPigeon;
 import frc.robot.commands.Turn45;
 import frc.robot.subsystems.Limelight;
 import frc.robot.subsystems.SwerveSubsystem;
-
 import java.io.File;
-
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.pathplanner.lib.auto.NamedCommands;
-
 import edu.wpi.first.math.MathUtil;
 import edu.wpi.first.wpilibj.DriverStation;
 import edu.wpi.first.wpilibj.Filesystem;
@@ -60,13 +58,13 @@ public class RobotContainer {
 
   // Função onde os eventos (triggers) são configurados
   private void configureBindings() {
-    new POVButton(controleXbox, 270).whileTrue(new AlingToTarget(limelight, swerve, this));
-    new POVButton(controleXbox, 90).whileTrue(new AlingToTarget(limelight, swerve, this));
-    new POVButton(controleXbox, 0).whileTrue(new AlingToTarget(limelight, swerve, this));
+    new POVButton(controleXbox, 0).whileTrue(new AlingToTarget(limelight, swerve, -2.3, 1.8));
+    new POVButton(controleXbox, 90).whileTrue(new AlingToTarget(limelight, swerve, -15.8, 0.9));
+    new POVButton(controleXbox, 270).whileTrue(new AlingToTarget(limelight, swerve, 10.4, 1.4));
     new JoystickButton(controleXbox, 1).onTrue(new Turn45(swerve, -47.0, this));
     new JoystickButton(controleXbox, 2).onTrue(new Turn45(swerve, 47.0, this));
     new JoystickButton(controleXbox, 4).onTrue(new Turn45(swerve, 2.0, this));
-    // new JoystickButton(controleXbox, 4).onTrue(new Virar45(swerve , pigeon2.getYaw().getValueAsDouble(), this));
+    new JoystickButton(controleXbox, 9).onTrue(new ResetPigeon(pigeon2, swerve));
   }
 
   // Função que retorna o autônomo

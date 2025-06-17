@@ -3,39 +3,40 @@ package frc.robot.commands;
 import edu.wpi.first.math.controller.PIDController;
 import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Timer;
+import edu.wpi.first.wpilibj.XboxController;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.RobotContainer;
 import frc.robot.subsystems.Limelight;
 import frc.robot.subsystems.SwerveSubsystem;
 
 public class AlingToTarget extends Command {
 
     private final Limelight limelight;
+    private Translation2d translation;
+    private final PIDController xController;
     private final SwerveSubsystem subsystem;
     private final PIDController rotationController;
-    private final PIDController xController;  // Novo controlador para movimento em X
-    private final RobotContainer container;
-    private Translation2d translation;
     
     // Constantes para ajuste fino
     private static final double kP_ROTATION = 0.1;
     private static final double kI_ROTATION = 0.01;
     private static final double kD_ROTATION = 0.005;
+    private static final double TOLERANCIA_ROTATION = 0.2;
     
     private static final double kP_X = 0.1;  // Ajuste esses valores conforme necessário
     private static final double kI_X = 0.01;
     private static final double kD_X = 0.005;
-    
+    private static final double TOLERANCIA_X = 0.1;
+
     // private static final double TOLERANCIA_ALINHAMENTO = 0.6;
-    private static final double MAX_CORRECAO = 0.5;
-    private static final double MAX_VELOCIDADE_X = 0.3;  // Velocidade máxima no eixo X
-    private static final double TIMEOUT_SECONDS = 3.0;
+    private double setpointY;
+    private double setpointX;
     private static final int MAX_TENTATIVAS = 3;
+    private static final double MAX_CORRECAO = 8;
     private static final double ZONA_MORTA = 0.05;
+    private static final double MAX_VELOCIDADE_X = 8; 
     private static final double ANGULO_MAXIMO = 30.0;
-    double setpointX;
-    double setpointY;
+    private static final double TIMEOUT_SECONDS = 5.5;
     
     private final Timer timer = new Timer();
     private int tentativas = 0;
@@ -44,16 +45,17 @@ public class AlingToTarget extends Command {
     private double ultimoTempoMudanca = 0.0;
     private static final double TEMPO_MINIMO_ESTAVEL = 0.5;
     
-    public AlingToTarget(Limelight limelight, SwerveSubsystem subsystem, RobotContainer container) {
-        if (limelight == null || subsystem == null || container == null) {
+    public AlingToTarget(Limelight limelight, SwerveSubsystem subsystem, double setpointX, double setpointY) {
+        if (limelight == null || subsystem == null) {
             throw new IllegalArgumentException("Parâmetros não podem ser nulos");
         }
         this.limelight = limelight;
         this.subsystem = subsystem;
-        this.container = container;
-        this.rotationController = new PIDController(kP_ROTATION, kI_ROTATION, kD_ROTATION);
+        this.setpointX = setpointX;
+        this.setpointY = setpointY;
         this.xController = new PIDController(kP_X, kI_X, kD_X);
-        addRequirements(subsystem); // Removido limelight dos requirements pois não é um subsistema
+        this.rotationController = new PIDController(kP_ROTATION, kI_ROTATION, kD_ROTATION);
+        addRequirements(subsystem);
     }
 
     @Override
@@ -61,10 +63,13 @@ public class AlingToTarget extends Command {
         try {
             rotationController.reset();
             xController.reset();
+
             rotationController.setSetpoint(0);
-            xController.setSetpoint(0);  // Queremos que a distância em X seja 0
-            rotationController.setTolerance(0.2);
-            xController.setTolerance(0.1);  // 10cm de tolerância para X
+            xController.setSetpoint(0);  
+
+            rotationController.setTolerance(TOLERANCIA_ROTATION);
+            xController.setTolerance(TOLERANCIA_X); 
+            
             System.out.println("Iniciando alinhamento com a tag...");
             timer.reset();
             timer.start();
@@ -79,16 +84,6 @@ public class AlingToTarget extends Command {
 
     @Override
     public void execute() {
-        if(container.controleXbox.getPOV() == 270){
-            setpointX = -17.38;
-            setpointY = -10.37;
-        } if(container.controleXbox.getPOV() == 90){
-            setpointX = 28.0;
-            setpointY = -19.0;
-        } if(container.controleXbox.getPOV() == 0){
-            setpointX = 2.1;
-            setpointY = -9.39;
-        }
         try {
             boolean temTarget = limelight.getHasTarget();
             
@@ -104,9 +99,16 @@ public class AlingToTarget extends Command {
             if (temTarget) {
                 double tx = limelight.getTx();
                 double distanciaX = limelight.getTy();
+                double ta = limelight.getTargetArea();
+
+                if (ta >= 4) {
+                    ta -= 3.5;
+                } else if (ta <= 4) {
+                    ta *= 32;
+                }
                 
                 // Proteção contra valores inválidos
-                if (Double.isNaN(tx) || Double.isNaN(distanciaX)) {
+                if (Double.isNaN(tx) || Double.isNaN(distanciaX) || Double.isNaN(ta)) {
                     System.err.println("Valores inválidos recebidos da Limelight");
                     return;
                 }
@@ -126,7 +128,7 @@ public class AlingToTarget extends Command {
                     // Aplica zona morta
                     if (Math.abs(correcaoRotacao) < ZONA_MORTA) correcaoRotacao = 0;
                     if (Math.abs(correcaoX) < ZONA_MORTA) correcaoX = 0;
-                    
+
                     // Limita correções
                     correcaoRotacao = Math.min(Math.max(correcaoRotacao, -MAX_CORRECAO), MAX_CORRECAO);
                     correcaoX = Math.min(Math.max(correcaoX, -MAX_VELOCIDADE_X), MAX_VELOCIDADE_X);
@@ -136,24 +138,32 @@ public class AlingToTarget extends Command {
                         correcaoRotacao *= 0.5;
                         correcaoX *= 0.5;
                     }
+
+                    // Limita o valor do TA
+                    if (ta > 4) {
+                        ta = 4;
+                    }
+
+                    // Aumenta a velocidade dependendo do TA
+                    correcaoRotacao = -correcaoRotacao * ta;
                     
-                    translation = new Translation2d(correcaoX, 0);
+                    translation = new Translation2d(-correcaoX * ta, 0);
                     subsystem.drive(translation, correcaoRotacao, true);
                     
                     // Debug
                     SmartDashboard.putNumber("Tempo de Alinhamento", timer.get());
                     SmartDashboard.putNumber("Tentativas", tentativas);
                     SmartDashboard.putNumber("Tempo desde última mudança", timer.get() - ultimoTempoMudanca);
-                    limelight.setLedMode(2);
+                    limelight.setLedMode(4);
                     
                     System.out.printf("Alinhando - TX: %.2f° | Dist X: %.2f | Rot: %.2f | X: %.2f%n", 
                         tx, distanciaX, correcaoRotacao, correcaoX);
-                        SmartDashboard.putNumber("tx", tx);      
-                        SmartDashboard.putBoolean("tag achada", limelight.getHasTarget());
-                        SmartDashboard.putNumber("ty", limelight.getTy());
-                        SmartDashboard.putBoolean("foi alinhada", rotationController.atSetpoint());
-                        SmartDashboard.putBoolean("foi alinhada", xController.atSetpoint());
-                       }
+                    SmartDashboard.putNumber("tx", tx);      
+                    SmartDashboard.putBoolean("tag achada", limelight.getHasTarget());
+                    SmartDashboard.putNumber("ty", limelight.getTy());
+                    SmartDashboard.putBoolean("foi alinhada", rotationController.atSetpoint());
+                    SmartDashboard.putBoolean("foi alinhada", xController.atSetpoint());
+                }
             } else {
                 subsystem.drive(new Translation2d(), 0, true);
                 System.out.println("Nenhuma tag detectada - Verifique o campo de visão da Limelight");

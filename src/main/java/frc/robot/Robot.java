@@ -7,9 +7,7 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
-
 import com.ctre.phoenix6.hardware.Pigeon2;
 import com.revrobotics.spark.SparkMax;
 import edu.wpi.first.wpilibj.Encoder;
@@ -22,7 +20,6 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.cameraserver.CameraServer;
 import frc.robot.autonomous.AutonomoConfig;
-import frc.robot.autonomous.PathPlanner;
 import frc.robot.subsystems.SwerveSubsystem;
 
 /**
@@ -37,7 +34,7 @@ public class Robot extends TimedRobot {
 
   private RobotContainer m_robotContainer;
   Constants Constants = new Constants();
-
+  
   //variaveis do elevador
   double angulo_elevador;
   public static double setpoint_elevador;
@@ -72,6 +69,7 @@ public class Robot extends TimedRobot {
   static double Kd_intake= 0;
   public static double setpoint_intake=60;
   double output_intake;
+  double medida_inicial;
 
   
   /**
@@ -96,7 +94,6 @@ public class Robot extends TimedRobot {
 
 
   //declaração dos componetes
-  // XboxController joystick = new XboxController(1);
   Joystick joystick = new Joystick(1);
   SparkMax Elevador14 = new SparkMax(14, SparkMax.MotorType.kBrushless);
   SparkMax Elevador15 = new SparkMax(15, SparkMax.MotorType.kBrushless);
@@ -108,12 +105,10 @@ public class Robot extends TimedRobot {
   public static PIDController PID_inatake = new PIDController(Kp_intake, Ki_intake, Kd_intake);
   public static DigitalInput fim_de_curso_Coral = new DigitalInput(0);
   SparkMax motor_cliber = new SparkMax(16, SparkMax.MotorType.kBrushless);
-  PathPlanner pathPlanner = new PathPlanner();
+  
 
   @Override
   public void robotInit() {
-    // Instantiate our RobotContainer.  This will perform all our button bindings, and put our
-    // autonomous chooser on the dashboard.
     m_robotContainer = new RobotContainer();
     encoderElev.setDistancePerPulse(360.0/2048.0);
     encoderElev.setReverseDirection(true);
@@ -127,32 +122,22 @@ public class Robot extends TimedRobot {
     pigeon.reset();
   }
 
-  /**
-   * This function is called every 20 ms, no matter the mode. Use this for items like diagnostics
-   * that you want ran during disabled, autonomous, teleoperated and test.
-   *
-   * <p>This runs after the mode specific periodic functions, but before LiveWindow and
-   * SmartDashboard integrated updating.
-   */
   @Override
   public void robotPeriodic() {
-    CommandScheduler.getInstance().run();
+    CommandScheduler.getInstance().run();  
   }
 
-  /** This function is called once each time the robot enters Disabled mode. */
   @Override
   public void disabledInit() {}
 
   @Override
   public void disabledPeriodic() {}
 
-  /** This autonomous runs the autonomous command selected by your {@link RobotContainer} class. */
   @Override
   public void autonomousInit() {
     m_robotContainer.setMotorBrake(true);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
-    // schedule the autonomous command (example)
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
     }
@@ -161,13 +146,8 @@ public class Robot extends TimedRobot {
     timer.start();
   }
 
-  /** This function is called periodically during autonomous. */
   @Override
-  public void autonomousPeriodic() {
-   
-    pathPlanner.configurarIntake();
-    }
-  
+  public void autonomousPeriodic() {}
 
   @Override
   public void teleopInit() {
@@ -189,38 +169,14 @@ public class Robot extends TimedRobot {
     encoderElev.reset();
     setpoint_elevador = 0.0;
     setpoint_intake = 58.0;
+    
   }
   
-  /** This function is called periodically during operator control. */
   @Override
   public void teleopPeriodic() {
-    // //ler joystic e ajustar setpoints
-    // if(joystick.getLeftY() > 0.5 || joystick.getLeftY() < -0.5){ 
-    //   setpoint_elevador= setpoint_elevador-10*joystick.getLeftY() ;
-    //   hablita_maquina_estados = false;
-    // }
-    // if(joystick.getRightY() > 0.5 || joystick.getRightY() < -0.5){
-    //   setpoint_intake = setpoint_intake + 1.0 * joystick.getRightY();
-    //   hablita_maquina_estados  = false;
-    // }
 
-    // if(joystick.getPOV() == 0){
-    //   motor_cliber.set(0.7);
-    // }
-    // if(joystick.getPOV() == 180){
-    //   motor_cliber.set(-0.7);
-    // }
-    // if(joystick.getPOV() == -1.0){
-    //   motor_cliber.set(0.0);
-    // }
-    SmartDashboard.putBoolean("Botao pressioando", hablita_maquina_estados);
-
-    // System.out.println("Maquina de estados:" + hablita_maquina_estados);
-    SmartDashboard.putBoolean("FIm de curso intale", fim_de_curso_Coral.get());
-
-    if(hablita_maquina_estados == false) {
-      if(joystick.getRawButtonPressed(4)){//L1
-        // System.out.println("L1 pressionado");
+    if(!hablita_maquina_estados) {
+      if(joystick.getRawButton(1)){//L1
         setpoint_1_elevador=setpoint_elevador;
         setpoint_1_intake = 68.0;
         setpoint_2_elevador = 0;
@@ -229,13 +185,12 @@ public class Robot extends TimedRobot {
         setpoint_3_intake = 55.0;
         hablita_maquina_estados = true;
         estado_atual = 1;
-        motor_da_bola.set(0.27);
+        motor_da_bola.set(0.1);
         botao++;
         trava_motor_bola=true;
       }
 
-      if(joystick.getRawButtonPressed(3)){//L2
-        // System.out.println("L2 pressionado");
+      if(joystick.getRawButton(2)){//L2
         setpoint_1_elevador=0.0;
         setpoint_1_intake = 72.0;
         setpoint_2_elevador = 210.0;
@@ -246,7 +201,7 @@ public class Robot extends TimedRobot {
         estado_atual = 1;
       }
       
-      if(joystick.getRawButtonPressed(2)){//L3
+      if(joystick.getRawButton(3)){//L3
         setpoint_1_elevador=0;
         setpoint_1_intake = 72.0;
         setpoint_2_elevador = 769.0;
@@ -257,7 +212,7 @@ public class Robot extends TimedRobot {
         estado_atual = 1;
       }
 
-      if(joystick.getRawButtonPressed(1)){//L4
+      if(joystick.getRawButton(4)){//L4
         setpoint_1_elevador=0;
         setpoint_1_intake = 72.0;
         setpoint_2_elevador = 1480.0;
@@ -268,7 +223,7 @@ public class Robot extends TimedRobot {
         estado_atual = 1;
       }
 
-      if(joystick.getRawButtonPressed(8)){//ir para L2 da bola
+      if(joystick.getRawButton(8)){//ir para L2 da bola
         setpoint_1_elevador=624.0;
         setpoint_1_intake = 225.0;
         setpoint_2_elevador = 624.0;
@@ -279,7 +234,7 @@ public class Robot extends TimedRobot {
         estado_atual = 1;
       }
 
-      if(joystick.getRawButtonPressed(9)){//ir para L3 da bola
+      if(joystick.getRawButton(9)){//ir para L3 da bola
         setpoint_1_elevador=1107.0;
         setpoint_1_intake = 225.0;
         setpoint_2_elevador = 1107.0;
@@ -290,7 +245,7 @@ public class Robot extends TimedRobot {
         estado_atual = 1;
       }
 
-      if(joystick.getRawButtonPressed(7)){//processador
+      if(joystick.getRawButton(7)){//processador
         setpoint_1_elevador=0.0;
         setpoint_1_intake = 225.0;
         setpoint_2_elevador = 0.0;
@@ -302,35 +257,54 @@ public class Robot extends TimedRobot {
       }
     }
     
+    if (joystick.getRawButton(5) && botao < 2) { // Puxa
+      motor_da_bola.set(0.3);
+      botao++;
+      trava_motor_bola = false;
+    }
+
+    if (joystick.getRawButton(6) && botao < 2) { // Solta
+      motor_da_bola.set(0.3);
+      botao++;
+      trava_motor_bola = false;
+    }
+
+    if(botao == 2){ // parar
+      botao = 0;
+      motor_da_bola.set(0);
+    }
+    
     /////////////////////////////calcular e controlar elevador////////////////////////////////////////////////////////////////
     angulo_elevador = encoderElev.getDistance();
     output_elevador = PIDElevador.calculate(angulo_elevador, setpoint_elevador);
   
     //ler fim de curso de cima
-    if(fimDeCurso_Cima.get())
-    {
+    if(fimDeCurso_Cima.get()) {
       if(output_elevador>0)output_elevador=0;
       if(setpoint_elevador>1480)setpoint_elevador=1480.0;
     }
     
     //ler fim de curso de baixo
-    if(fimDeCurso_baixo.get())
-    {
-      if(output_elevador<0)output_elevador=0;
-      if(setpoint_elevador<0.0)setpoint_elevador=0.0;
-      if(zerar_elevador==true&&(angulo_elevador>tolerancia_elevador||angulo_elevador<-1*tolerancia_elevador))
-      {
-        //encoderElev.reset();   
+    if(fimDeCurso_baixo.get()) {
+      if(output_elevador<0) {
+        output_elevador=0;
+      }
+      
+      if(setpoint_elevador<0.0) {
+        setpoint_elevador=0.0;
+      }
+
+      if(zerar_elevador == true && (angulo_elevador > tolerancia_elevador || angulo_elevador < -1 * tolerancia_elevador)) {
         zerar_elevador=false;  
       }
-    }
-    else
-    {
+    } else {
       zerar_elevador=true;
     }
   
     //segurança do elevador em relação ao intake
-    if(seguranca_elevador == true)output_elevador=0.0;
+    if(seguranca_elevador == true) {
+      output_elevador=0.0;
+    }
     
     Elevador14.set(output_elevador);
     Elevador15.set(-output_elevador );
@@ -341,125 +315,97 @@ public class Robot extends TimedRobot {
     output_intake = PID_inatake.calculate(angulo_intake, setpoint_intake);
   
       //ler posição minima do intake
-      if(angulo_intake < 55)
-      {
-        if(output_intake<0)output_intake=0.0;
-        if(setpoint_intake<55)setpoint_intake = 55.0;
+      if(angulo_intake < 55) {
+        if(output_intake<0) {
+          output_intake=0.0;
+        }
+
+        if(setpoint_intake < 55){
+          setpoint_intake = 55.0;
+        }
       }
   
       //ler posição maxima do intake 
-      if(angulo_intake > 230)
-      {
-        if(output_intake>0)output_intake=0.0;
-        if(setpoint_intake> 230)setpoint_intake = 230.0;
+      if(angulo_intake > 230) {
+        if(output_intake > 0) {
+          output_intake=0.0;
+        }
+
+        if (setpoint_intake > 230) {
+          setpoint_intake = 230.0;
+        }
       }
 
     
     motor_intake.set(output_intake);
   
-    if(angulo_intake < 64)seguranca_elevador = true;
-    else{seguranca_elevador = false;}
-
-    SmartDashboard.putNumber("Estado botao: ", botao);
-    if (joystick.getRawButton(5) && botao < 2) { // Puxa
-      motor_da_bola.set(-0.3);
-      botao++;
-      trava_motor_bola = false;
-    }
-
-    if (joystick.getRawButton(6) && botao < 2) { // Solta
-      motor_da_bola.set(0.3);
-      botao++;
-      trava_motor_bola = false;
-    }
-    if(botao == 2){ // parar
-      botao = 0;
-      motor_da_bola.set(0);
+    if (angulo_intake < 64) {
+      seguranca_elevador = true;
+    } else{
+      seguranca_elevador = false;
     }
     /////////////////////////////////////////// fim do código do intake //////////////////////////////////////////////////////////  
   
-    ///////////////////////////////////////inicio do código do  motor da bola e do coral ////////////////////////////////////////////
-    //if(motor_da_bola.getOutputCurrent()>40)tem_bola_intake=true;
-    //if(tem_bola_intake)motor_da_bola.set(0.0);
+    /////////////////////////////////////// inicio do código do  motor da bola e do coral ////////////////////////////////////////////
     
-    if(trava_motor_bola==true) motor_da_bola.set(0.2);
-    if(!fim_de_curso_Coral.get()&&trava_motor_bola==true){
+    if(trava_motor_bola) {
+      motor_da_bola.set(0.2);
+    }
+
+    if(!fim_de_curso_Coral.get() && trava_motor_bola){
       motor_da_bola.set(0);
       trava_motor_bola=false;
     }
       
-    ///////////////////////////////////////fim do código da bola e do coral ////////////////////////////////////////////
+    /////////////////////////////////////// fim do código da bola e do coral ////////////////////////////////////////////
     
-    ////////////////////////////////// Inicio do código da maquina de estados////////////////////////////////////////
-    if(hablita_maquina_estados==true) {
-      
+    ////////////////////////////////// Inicio do código da maquina de estados ////////////////////////////////////////
+    if(hablita_maquina_estados) {
       switch(estado_atual) {
-        case 1:
-        {
+        case 1: {
           setpoint_elevador=setpoint_1_elevador;
           setpoint_intake=setpoint_1_intake;
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint())
-          {
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
             estado_atual = 2;
             setpoint_elevador=setpoint_2_elevador;
             setpoint_intake=setpoint_2_intake;
           }
-        }break;
-        case 2:
-        {
-          
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint())
-          {
+        } break;
+        case 2: {
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
             estado_atual = 3;
             setpoint_elevador=setpoint_3_elevador;
             setpoint_intake=setpoint_3_intake;
-          
           }
-        }break;
-        case 3:
-        {
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint())
-          {
+        } break;
+        case 3: {
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
             hablita_maquina_estados = false;
           }
-        }break;
+        } break;
       }
     }
-    ////////////////////////////////// Fim do código da maquina de estados////////////////////////////////////////
-  
 
-    ////////////////////////////////////////////// virar 45 graus//////////////////////////////////////////////////
-   
-    
-   //////////////////////////////////////////////////viar 45 graus/////////////////////////////////////////////////
+    ////////////////////////////////// Fim do código da maquina de estados ////////////////////////////////////////
     //imprimir os logs
-    if(timer.get() > (lasttick + 2.0))
-    {
+    if(timer.get() > (lasttick + 2.0)) {
       lasttick = timer.get();
       System.out.printf("Set_point elevador: %2f\n", setpoint_elevador);
-      //System.out.printf("pode do swerve %f", subsystem.getPose());
       System.out.printf("Angulo_elevador: %2f\n", angulo_elevador);
-      //System.out.printf("setpoint intake: %2f \n", setpoint_intake);
-      //System.out.printf("angulo do intake: %2f\n", angulo_intake);
-      //System.out.printf("Corrente motor bola: %2f\n", motor_da_bola.getOutputCurrent());
     }
   }
 
   @Override
   public void testInit() {
-    // Cancels all running commands at the start of test mode.
     CommandScheduler.getInstance().cancelAll();
   }
 
-  /** This function is called periodically during test mode. */
   @Override
   public void testPeriodic() {}
 
-  /** This function is called once when the robot is first started up. */
   @Override
   public void simulationInit() {}
 
-  /** This function is called periodically whilst in simulation. */
   @Override
   public void simulationPeriodic() {}
 
