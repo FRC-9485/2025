@@ -132,8 +132,10 @@ public class Robot extends TimedRobot {
   @Override
   public void disabledPeriodic() {}
 
+  double vezes_rodadas = 0;
   @Override
   public void autonomousInit() {
+    vezes_rodadas = 0;
     m_robotContainer.setMotorBrake(true);
     m_autonomousCommand = m_robotContainer.getAutonomousCommand();
 
@@ -146,7 +148,44 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void autonomousPeriodic() {}
+  public void autonomousPeriodic() {
+    if (vezes_rodadas == 0) {
+      setpoint_1_elevador=0.0;
+      setpoint_1_intake = 72.0;
+      setpoint_2_elevador = 210.0;
+      setpoint_2_intake = 72.0;
+      setpoint_3_elevador = 210.0;
+      setpoint_3_intake = 72.0;
+      hablita_maquina_estados = true;
+      estado_atual = 1;
+    }
+
+    if(hablita_maquina_estados) {
+      switch(estado_atual) {
+        case 1: {
+          setpoint_elevador=setpoint_1_elevador;
+          setpoint_intake=setpoint_1_intake;
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
+            estado_atual = 2;
+            setpoint_elevador=setpoint_2_elevador;
+            setpoint_intake=setpoint_2_intake;
+          }
+        } break;
+        case 2: {
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
+            estado_atual = 3;
+            setpoint_elevador=setpoint_3_elevador;
+            setpoint_intake=setpoint_3_intake;
+          }
+        } break;
+        case 3: {
+          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
+            hablita_maquina_estados = false;
+          }
+        } break;
+      }
+    }
+  }
 
   @Override
   public void teleopInit() {

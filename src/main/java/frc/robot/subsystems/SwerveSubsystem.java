@@ -36,7 +36,6 @@ public class SwerveSubsystem extends SubsystemBase {
     Pigeon2 pigeon = new Pigeon2(9);
     Pigeon2Swerve swerve = new Pigeon2Swerve(9);
    
-  
     // Método construtor da classe
     public SwerveSubsystem(File directory) {
         // Seta a telemetria como nível mais alto
@@ -51,14 +50,12 @@ public class SwerveSubsystem extends SubsystemBase {
         swerveDrive.setChassisDiscretization(true, 0.2);
         
         setupPathPlanner();
-           
     }
     
     @Override
     public void periodic() {
       // Dentro da função periódica atualizamos nossa odometria
       swerveDrive.updateOdometry();
-      
     }
 
       public void setupPathPlanner() {
@@ -102,10 +99,6 @@ public class SwerveSubsystem extends SubsystemBase {
           config,
           // The robot configuration
           () -> {
-            // Boolean supplier that controls when the path will be mirrored for the red alliance
-            // This will flip the path being followed to the red side of the field.
-            // THE ORIGIN WILL REMAIN ON THE BLUE SIDE
-
             var alliance = DriverStation.getAlliance();
             if (alliance.isPresent())
             {
@@ -114,12 +107,10 @@ public class SwerveSubsystem extends SubsystemBase {
             return false;
           },
           this
-          // Reference to this subsystem to set requirements
                            );
 
     } catch (Exception e)
     {
-      // Handle exception as needed
       e.printStackTrace();
     }
   }
