@@ -7,19 +7,24 @@ package frc.robot;
 import edu.wpi.first.wpilibj.TimedRobot;
 import edu.wpi.first.wpilibj2.command.Command;
 import edu.wpi.first.wpilibj2.command.CommandScheduler;
-import com.ctre.phoenix6.hardware.Pigeon2;
+
 import com.revrobotics.spark.SparkMax;
+
 import edu.wpi.first.wpilibj.Encoder;
 import edu.wpi.first.wpilibj.Joystick;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.DigitalInput;
+
 import edu.wpi.first.math.controller.PIDController;
-import edu.wpi.first.math.geometry.Pose2d;
-import edu.wpi.first.math.geometry.Translation2d;
+
 import edu.wpi.first.wpilibj.DutyCycleEncoder;
 import edu.wpi.first.cameraserver.CameraServer;
-import frc.robot.autonomous.AutonomoConfig;
-import frc.robot.subsystems.SwerveSubsystem;
+
+import frc.robot.autonomous.AutonomousInterface;
+import frc.robot.config.constants.ConstantDevices.CAN;
+import frc.robot.config.constants.ConstantDevices.DIO;
+import frc.robot.config.constants.ConstantDevices.DUTY_CYCLE;
+import frc.robot.config.constants.ConstantDevices.CONTROLLERS;
 
 /**
  * The VM is configured to automatically run this class, and to call the functions corresponding to
@@ -28,47 +33,42 @@ import frc.robot.subsystems.SwerveSubsystem;
  * project.
  */
 public class Robot extends TimedRobot {
-  
   private Command m_autonomousCommand;
-
-  private RobotContainer m_robotContainer;
-  Constants Constants = new Constants();
+  private RobotContainer robotContainer;
   
-  //variaveis do elevador
-  double angulo_elevador;
-  public static double setpoint_elevador;
-  double output_elevador;
+  // Variaveis do elevador
   static double KpElev = 0.01;
   static double KiElev = 0;
   static double KdElev = 0;
-  boolean seguranca_elevador = false;
-  boolean zerar_elevador=false;
+  
   double tolerancia_elevador=30.0;
+  boolean zerar_elevador = false;
+  boolean seguranca_elevador = false;
+  
+  double angulo_elevador;
+  double output_elevador;
+  public static double setpoint_elevador;
 
-  //coral station
-  String lado;
-  Pose2d pose = new Pose2d();
-  SwerveSubsystem subsystem;
-  Translation2d translation2d = new Translation2d(0, 0);
-  Pigeon2 pigeon = new Pigeon2(9);
+  // Autonomous
+  AutonomousInterface autonomoConfig;
 
-  //autonomo
-  AutonomoConfig autonomoConfig = new AutonomoConfig();
-
-  //variaveis do intake
-  SparkMax motor_intake = new SparkMax(17, SparkMax.MotorType.kBrushless);
-  public static SparkMax motor_da_bola = new SparkMax(18, SparkMax.MotorType.kBrushless);
-  boolean trava_motor_bola=false;
-  boolean tem_bola_intake=false;
+  // Variaveis do intake
+  double output_intake;
+  double medida_inicial;
   double speed_intake;
-  DutyCycleEncoder encoder_intake = new DutyCycleEncoder(1);
   double angulo_intake;
+
   static double Kp_intake = 0.01;
   static double Ki_intake = 0;
   static double Kd_intake= 0;
-  public static double setpoint_intake=60;
-  double output_intake;
-  double medida_inicial;
+  public static double setpoint_intake = 60;
+  
+  boolean trava_motor_bola = false;
+  boolean tem_bola_intake = false;
+
+  DutyCycleEncoder encoder_intake = new DutyCycleEncoder(DUTY_CYCLE.ENCODER_INTAKE);
+  SparkMax motor_intake = new SparkMax(CAN.ID.INTAKE_MOTOR_SPARK, SparkMax.MotorType.kBrushless);
+  public static SparkMax motor_da_bola = new SparkMax(CAN.ID.ALGAE_MOTOR_SPARK, SparkMax.MotorType.kBrushless);
 
   
   /**
@@ -78,47 +78,50 @@ public class Robot extends TimedRobot {
   //variaveis de log
   double lasttick;
 
-  //variavies do intake
-  int botao = 0;
-
   //variaveis para maquina de estado
-  boolean hablita_maquina_estados = false;
   int estado_atual= 0;
-  double setpoint_1_elevador = 0;
-  double setpoint_1_intake = 0;
-  double setpoint_2_elevador = 0;
-  double setpoint_2_intake = 0;
-  double setpoint_3_elevador = 0;
   double setpoint_3_intake = 0;
+  double setpoint_1_intake = 0;
+  double setpoint_2_intake = 0;
+  double setpoint_1_elevador = 0;
+  double setpoint_2_elevador = 0;
+  double setpoint_3_elevador = 0;
+  boolean hablita_maquina_estados = false;
 
-
-  //declaração dos componetes
-  Joystick joystick = new Joystick(1);
-  SparkMax Elevador14 = new SparkMax(14, SparkMax.MotorType.kBrushless);
-  SparkMax Elevador15 = new SparkMax(15, SparkMax.MotorType.kBrushless);
-  Encoder encoderElev = new Encoder(6, 8);
+  // Controles
   Timer timer = new Timer();
-  DigitalInput fimDeCurso_baixo = new DigitalInput(2);
-  public static PIDController PIDElevador = new PIDController(KpElev, KiElev, KdElev);
-  DigitalInput fimDeCurso_Cima = new DigitalInput(3);
-  public static PIDController PID_inatake = new PIDController(Kp_intake, Ki_intake, Kd_intake);
-  public static DigitalInput fim_de_curso_Coral = new DigitalInput(0);
-  SparkMax motor_cliber = new SparkMax(16, SparkMax.MotorType.kBrushless);
-  
+  int vezesBotaoApertado = 0;
+  Joystick joystick = new Joystick(CONTROLLERS.INTAKE_CONTROLLER_PORT);
 
+  // Elevador
+  Encoder encoderElev = new Encoder(DIO.ELEVATOR_ENCODER_A, DIO.ELEVATOR_ENCODER_B);
+  SparkMax Elevador15 = new SparkMax(CAN.ID.LEFT_ELEVATOR_SPARK, SparkMax.MotorType.kBrushless);
+  SparkMax Elevador14 = new SparkMax(CAN.ID.RIGHT_ELEVATOR_SPARK, SparkMax.MotorType.kBrushless);
+
+  // Intake
+  DigitalInput fimDeCurso_Cima = new DigitalInput(DIO.LIMIT_SWITCH_UP);
+  DigitalInput fimDeCurso_baixo = new DigitalInput(DIO.LIMIT_SWITCH_DOWN);
+  public static DigitalInput fim_de_curso_Coral = new DigitalInput(DIO.LIMIT_SWITCH_CORAL);
+
+  public static PIDController PIDElevador = new PIDController(KpElev, KiElev, KdElev);
+  public static PIDController PID_inatake = new PIDController(Kp_intake, Ki_intake, Kd_intake);
+  
   @Override
   public void robotInit() {
-    m_robotContainer = new RobotContainer();
-    encoderElev.setDistancePerPulse(360.0/2048.0);
-    encoderElev.setReverseDirection(true);
-    encoder_intake.setDutyCycleRange(0, 360);
     System.out.println("Robo iniciado\n");
-    PIDElevador.setTolerance(tolerancia_elevador);
-    PID_inatake.setTolerance(4.0);
     setpoint_elevador = 0.0;
     setpoint_intake = 58.0;
+    
+    robotContainer = new RobotContainer();
+    autonomoConfig = new AutonomousInterface();
+
+    encoderElev.setDistancePerPulse(360.0/2048.0);
+    encoder_intake.setDutyCycleRange(0, 360);
+    encoderElev.setReverseDirection(true);
+    
+    PIDElevador.setTolerance(tolerancia_elevador);
+    PID_inatake.setTolerance(4.0);
     CameraServer.startAutomaticCapture();
-    pigeon.reset();
   }
 
   @Override
@@ -127,17 +130,9 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void disabledInit() {}
-
-  @Override
-  public void disabledPeriodic() {}
-
-  double vezes_rodadas = 0;
-  @Override
   public void autonomousInit() {
-    vezes_rodadas = 0;
-    m_robotContainer.setMotorBrake(true);
-    m_autonomousCommand = m_robotContainer.getAutonomousCommand();
+    robotContainer.setMotorBrake(true);
+    m_autonomousCommand = robotContainer.getAutonomousCommand();
 
     if (m_autonomousCommand != null) {
       m_autonomousCommand.schedule();
@@ -148,71 +143,31 @@ public class Robot extends TimedRobot {
   }
 
   @Override
-  public void autonomousPeriodic() {
-    if (vezes_rodadas == 0) {
-      setpoint_1_elevador=0.0;
-      setpoint_1_intake = 72.0;
-      setpoint_2_elevador = 210.0;
-      setpoint_2_intake = 72.0;
-      setpoint_3_elevador = 210.0;
-      setpoint_3_intake = 72.0;
-      hablita_maquina_estados = true;
-      estado_atual = 1;
-    }
-
-    if(hablita_maquina_estados) {
-      switch(estado_atual) {
-        case 1: {
-          setpoint_elevador=setpoint_1_elevador;
-          setpoint_intake=setpoint_1_intake;
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
-            estado_atual = 2;
-            setpoint_elevador=setpoint_2_elevador;
-            setpoint_intake=setpoint_2_intake;
-          }
-        } break;
-        case 2: {
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
-            estado_atual = 3;
-            setpoint_elevador=setpoint_3_elevador;
-            setpoint_intake=setpoint_3_intake;
-          }
-        } break;
-        case 3: {
-          if(PIDElevador.atSetpoint() && PID_inatake.atSetpoint()) {
-            hablita_maquina_estados = false;
-          }
-        } break;
-      }
-    }
-  }
+  public void autonomousPeriodic() {}
 
   @Override
   public void teleopInit() {
     if (m_autonomousCommand != null) {
       m_autonomousCommand.cancel();
     }
+    System.out.println("Teleop iniciado\n");
 
     timer.reset();
     timer.start();
-    lasttick = 0.0;
-    System.out.println("Teleop iniciado\n");
-
-    botao = 0;
-    estado_atual = 0;
-    hablita_maquina_estados = false;
-    trava_motor_bola = false;
-    tem_bola_intake = false;
-
     encoderElev.reset();
-    setpoint_elevador = 0.0;
-    setpoint_intake = 58.0;
     
+    vezesBotaoApertado = 0;
+    lasttick = 0.0;
+    estado_atual = 0;
+    setpoint_intake = 58.0;
+    setpoint_elevador = 0.0;
+    tem_bola_intake = false;
+    trava_motor_bola = false;
+    hablita_maquina_estados = false;
   }
   
   @Override
   public void teleopPeriodic() {
-
     if(!hablita_maquina_estados) {
       if(joystick.getRawButton(1)){//L1
         setpoint_1_elevador=setpoint_elevador;
@@ -224,7 +179,7 @@ public class Robot extends TimedRobot {
         hablita_maquina_estados = true;
         estado_atual = 1;
         motor_da_bola.set(0.1);
-        botao++;
+        vezesBotaoApertado++;
         trava_motor_bola=true;
       }
 
@@ -295,33 +250,36 @@ public class Robot extends TimedRobot {
       }
     }
     
-    if (joystick.getRawButton(6) && botao < 2) { // Puxa
+    if (joystick.getRawButton(6) && vezesBotaoApertado < 2) { // Puxa
       motor_da_bola.set(0.3);
-      botao++;
+      vezesBotaoApertado++;
       trava_motor_bola = false;
     }
 
-    if (joystick.getRawButton(5) && botao < 2) { // Solta
+    if (joystick.getRawButton(5) && vezesBotaoApertado < 2) { // Solta
       motor_da_bola.set(-0.3);
-      botao++;
+      vezesBotaoApertado++;
       trava_motor_bola = false;
     }
 
-
-
-    if(botao >= 2){ // parar
-      botao = 0;
+    if(vezesBotaoApertado >= 2){ // parar
+      vezesBotaoApertado = 0;
       motor_da_bola.set(0);
     }
     
-    /////////////////////////////calcular e controlar elevador////////////////////////////////////////////////////////////////
+    // Controle do elevador
     angulo_elevador = encoderElev.getDistance();
     output_elevador = PIDElevador.calculate(angulo_elevador, setpoint_elevador);
   
-    //ler fim de curso de cima
+    // Fim de curso de cima
     if(fimDeCurso_Cima.get()) {
-      if(output_elevador>0)output_elevador=0;
-      if(setpoint_elevador>1480)setpoint_elevador=1480.0;
+      if(output_elevador>0) {
+        output_elevador=0;
+      }
+      
+      if(setpoint_elevador>1480) {
+        setpoint_elevador=1480.0;
+      }
     }
     
     //ler fim de curso de baixo
@@ -341,20 +299,19 @@ public class Robot extends TimedRobot {
       zerar_elevador=true;
     }
   
-    //segurança do elevador em relação ao intake
-    if(seguranca_elevador == true) {
+    // Segurança do elevador em relação ao intake
+    if(seguranca_elevador) {
       output_elevador=0.0;
     }
     
     Elevador14.set(output_elevador);
-    Elevador15.set(-output_elevador );
-    //////////////////////////////////////////////// fim do código do elevador //////////////////////////////////////////////////////
-  
-    //////////////////////////////////////// inicio do codigo do intake ////////////////////////////////////////////////////////////
+    Elevador15.set(-output_elevador);
+    
+    // Inicio do código do intake
     angulo_intake = encoder_intake.get() * 360.0;
     output_intake = PID_inatake.calculate(angulo_intake, setpoint_intake);
   
-      //ler posição minima do intake
+      // Ler posição minima do intake
       if(angulo_intake < 55) {
         if(output_intake<0) {
           output_intake=0.0;
@@ -365,7 +322,7 @@ public class Robot extends TimedRobot {
         }
       }
   
-      //ler posição maxima do intake 
+      // Ler posição maxima do intake 
       if(angulo_intake > 230) {
         if(output_intake > 0) {
           output_intake=0.0;
@@ -383,11 +340,9 @@ public class Robot extends TimedRobot {
       seguranca_elevador = true;
     } else{
       seguranca_elevador = false;
-    }
-    /////////////////////////////////////////// fim do código do intake //////////////////////////////////////////////////////////  
-  
-    /////////////////////////////////////// inicio do código do  motor da bola e do coral ////////////////////////////////////////////
-    
+    }  
+
+    // Motor da bola e do coral
     if(trava_motor_bola) {
       motor_da_bola.set(0.2);
     }
@@ -397,9 +352,8 @@ public class Robot extends TimedRobot {
       trava_motor_bola=false;
     }
       
-    /////////////////////////////////////// fim do código da bola e do coral ////////////////////////////////////////////
     
-    ////////////////////////////////// Inicio do código da maquina de estados ////////////////////////////////////////
+    // Inicio do código da maquina de estados 
     if(hablita_maquina_estados) {
       switch(estado_atual) {
         case 1: {
@@ -426,8 +380,7 @@ public class Robot extends TimedRobot {
       }
     }
 
-    ////////////////////////////////// Fim do código da maquina de estados ////////////////////////////////////////
-    //imprimir os logs
+    // Imprimir os logs
     if(timer.get() > (lasttick + 2.0)) {
       lasttick = timer.get();
       System.out.printf("Set_point elevador: %2f\n", setpoint_elevador);

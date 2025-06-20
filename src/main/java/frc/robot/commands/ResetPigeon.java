@@ -7,8 +7,8 @@ import frc.robot.subsystems.SwerveSubsystem;
 
 public class ResetPigeon extends Command{
     
-    Pigeon2 pigeon = new Pigeon2(9);
     SwerveSubsystem subsystem;
+    Pigeon2 pigeon;
 
     public ResetPigeon(Pigeon2 pigeon, SwerveSubsystem subsystem){
         this.pigeon = pigeon;
@@ -17,20 +17,22 @@ public class ResetPigeon extends Command{
     }
 
     @Override
-    public void initialize(){}
+    public void initialize() {}
     
     @Override
-    public void execute(){
+    public void execute() {
         pigeon.reset();
         subsystem.swerveDrive.zeroGyro();
         System.out.println("Pigeon Resetado");
     }
+    
     @Override
-    public boolean isFinished(){
+    public boolean isFinished() {
         return pigeon.getYaw().getValueAsDouble() == 0;
     }
+
     @Override
-    public void end(boolean interrupted){
+    public void end(boolean interrupted) {
         subsystem.drive(new Translation2d(0, 0), 0, true);
     }
 }

@@ -5,18 +5,21 @@ import edu.wpi.first.math.geometry.Translation2d;
 import edu.wpi.first.wpilibj.Timer;
 import edu.wpi.first.wpilibj.smartdashboard.SmartDashboard;
 import edu.wpi.first.wpilibj2.command.Command;
-import frc.robot.subsystems.Limelight;
+import frc.robot.devices.Limelight;
 import frc.robot.subsystems.SwerveSubsystem;
 
 public class AlingToTarget extends Command {
     
-    private final Limelight limelight;
-    private Translation2d translation;
-    private final PIDController xController;
-    private final SwerveSubsystem subsystem;
-    private final PIDController rotationController;
     private double setpointY;
     private double setpointX;
+
+    private final Limelight limelight;
+    
+    private Translation2d translation;
+    private final SwerveSubsystem subsystem;
+    
+    private final PIDController xController;
+    private final PIDController rotationController;
     
     // Constantes para ajuste fino
     private static final double kP_ROTATION = 0.1;
@@ -39,9 +42,10 @@ public class AlingToTarget extends Command {
     private static final double TEMPO_MINIMO_ESTAVEL = 0.5;
     
     private int tentativas = 0;
-    private boolean ultimoEstadoTarget = false;
     private double ultimaTx = 0.0;
     private double ultimoTempoMudanca = 0.0;
+    private boolean ultimoEstadoTarget = false;
+
     private final Timer timer = new Timer();
     
     public AlingToTarget(Limelight limelight, SwerveSubsystem subsystem, double setpointX, double setpointY) {
